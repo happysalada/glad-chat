@@ -5,6 +5,7 @@
     ChatCompletionRequestMessageRoleEnum,
   } from "openai";
   import type { ChatCompletionRequestMessage } from "openai";
+	import { PUBLIC_PROXY_URL } from "$env/static/public";
 
   import BotMessage from "$lib/BotMessage.svelte";
   import UserMessage from "$lib/UserMessage.svelte";
@@ -23,41 +24,40 @@
   ];
   let message = "";
   let from = "";
-  $: name = from.length == 0 ? "グラッドキューブ社員" : from;
+  // TODO figure out which name could work with ^[a-zA-Z0-9_-]{1,64}$'
+  $: name = from.length == 0 ? "glad-cube_employee" : "glad-cube_employee";
   // const el = document.getElementById("messages");
   // el.scrollTop = el.scrollHeight;
 
-  const configuration = new Configuration({
-    apiKey: "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",
-  });
-  const openai = new OpenAIApi(configuration);
-  // const qdrant = new Qdrant("https://qdrant.sassy.technology/");
-
   async function sendMessage(): Promise<void> {
-    const embedding = await openai.createEmbedding({
-      model: "text-embedding-ada-002",
-      input: message,
+    const embeddingResponse = await fetch(`${PUBLIC_PROXY_URL}/embeddings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input: message,
+        })
     });
-    const qdrant_response = await fetch(
+    const {embedding} = await embeddingResponse.json();
+    const qdrantResponse = await fetch(
       "https://qdrant.sassy.technology/collections/gc_first_test/points/search",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          vector: embedding.data.data[0].embedding,
+          vector: embedding,
           limit: 10,
           with_payload: true,
         }),
       }
     );
-    const { result: qdrant_payloads } = await qdrant_response.json();
-    console.log("related chats", qdrant_payloads);
+    const { result: qdrantPayloads } = await qdrantResponse.json();
+    console.log("related chats", qdrantPayloads);
     messages = [
       ...messages,
       {
         role: ChatCompletionRequestMessageRoleEnum.System,
         content: `グラッドキューブのチャット履歴の中にユーザーの質問に関連した内容は以下です
-      ${qdrant_payloads.map(
+      ${qdrantPayloads.map(
         ({ payload }: { payload: { room: string; message: string } }) =>
           `ルーム:${payload.room};メッセージ：${payload.message}`
       )}`,
@@ -68,15 +68,19 @@
         name,
       },
     ];
-    const completion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages,
+    const completionResponse = await fetch(`${PUBLIC_PROXY_URL}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages,
+        })
     });
+    const {content} = await completionResponse.json();
     messages = [
       ...messages,
       {
         role: ChatCompletionRequestMessageRoleEnum.Assistant,
-        content: completion.data.choices[0]?.message?.content || "",
+        content,
       },
     ];
     message = "";
@@ -203,7 +207,7 @@
         placeholder="メッセージを書く"
         bind:value={message}
         on:keydown={(e) => {
-          if (e.key === "Enter") sendMessage();
+          if (e.key === "Enter" && e.shiftKey) sendMessage();
         }}
         class="w-full focus:outline-none focus:placeholder-gray-400 text-gray-600 placeholder-gray-600 pl-12 bg-gray-200 rounded-md py-3"
       />

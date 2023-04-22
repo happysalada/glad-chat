@@ -35,6 +35,10 @@
               name = "PUBLIC_SURREAL_DATABASE";
               value = "rex";
             }
+            {
+              name = "PUBLIC_PROXY_URL";
+              value = "http://127.0.0.1:8787";
+            }
           ];
           commands = [
             {
