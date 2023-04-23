@@ -30,6 +30,9 @@
   // el.scrollTop = el.scrollHeight;
 
   async function sendMessage(): Promise<void> {
+    // create a copy to clear the prompt for better UX
+    const messageCopy = message;
+    message = "";
     const embeddingResponse = await fetch(`${PUBLIC_PROXY_URL}/embeddings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -64,7 +67,7 @@
       },
       {
         role: ChatCompletionRequestMessageRoleEnum.User,
-        content: message,
+        content: messageCopy,
         name,
       },
     ];
@@ -83,7 +86,6 @@
         content,
       },
     ];
-    message = "";
   }
 
   function exportJson() {
