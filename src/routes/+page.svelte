@@ -209,7 +209,7 @@
         placeholder="メッセージを書く"
         bind:value={message}
         on:keydown={(e) => {
-          if (e.key === "Enter" && e.shiftKey) sendMessage();
+          if (e.key === "Enter" && e.shiftKey && message != "") sendMessage();
         }}
         class="w-full focus:outline-none focus:placeholder-gray-400 text-gray-600 placeholder-gray-600 pl-12 bg-gray-200 rounded-md py-3"
       />
@@ -280,7 +280,11 @@
         <button
           type="button"
           on:click={sendMessage}
-          class="inline-flex items-center justify-center rounded-lg px-4 py-3 transition duration-500 ease-in-out text-white bg-blue-500 hover:bg-blue-400 focus:outline-none"
+          disabled={message == ""}
+          class:bg-gray-500={message == ""}
+          class:bg-blue-500={message != ""}
+          class:hover:bg-blue-800={message != ""}
+          class="inline-flex items-center justify-center rounded-lg px-4 py-3 transition duration-500 ease-in-out text-white focus:outline-none"
         >
           <span class="font-bold">Send</span>
           <svg
