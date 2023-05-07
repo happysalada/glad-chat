@@ -8,6 +8,7 @@
 
   let message = "";
   let from = "";
+  let loading = false;
   let messages = INITIAL_MESSAGES;
   // const el = document.getElementById("messages");
   // el.scrollTop = el.scrollHeight;
@@ -104,17 +105,34 @@
         <UserMessage {content} />
       {/if}
     {/each}
+    {#if loading}
+      <div class="flex items-end justify-end">
+        <div
+          class="flex flex-col space-y-2 text-xs max-w-md mx-2 order-1 items-end"
+        >
+          <img
+            width="225"
+            height="125"
+            src="https://media.giphy.com/media/9CffOPMLx0Hf2/giphy.gif"
+            alt="the machine is typing"
+            class="mr-6"
+          />
+        </div>
+      </div>
+    {/if}
   </div>
   <form
     class="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0"
     method="POST"
     use:enhance={() => {
       message = "";
-      console.log("loading")
+      loading = true;
       return async ({ result: { data, type } }) => {
         if (type === "success") {
+          console.log(data.messages);
           messages = [...data.messages];
         } else if (type === "failure") {
+          loading = false;
           messages = [
             ...messages,
             {

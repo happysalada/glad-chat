@@ -1,10 +1,35 @@
 import type { Actions } from './$types';
 import { PUBLIC_PROXY_URL } from "$env/static/public";
 import {
-  ChatCompletionRequestMessageRoleEnum,
+	ChatCompletionRequestMessageRoleEnum,
 } from "openai";
+// import { Tiktoken, ModelData } from '@dqbd/tiktoken/lite';
+// import { load } from '@dqbd/tiktoken/load';
+// import registry from '@dqbd/tiktoken/registry.json';
+// import models from '@dqbd/tiktoken/model_to_encoding.json';
 // import { getJson } from "serpapi";
 
+const suggestionsFromQdrant = async (input: string, payloads: { payload: {room: string, message: string }}[], apiKey: string): Promise<string> => {
+	const completionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"Authorization": `Bearer ${apiKey}`
+		},
+		body: JSON.stringify({
+			model: "gpt-3.5-turbo",
+			messages: [...payloads.map(   ({ payload }) => ({ role: ChatCompletionRequestMessageRoleEnum.System, content: `ルーム:${payload.room};メッセージ：${payload.message}`})),
+				{
+					role: ChatCompletionRequestMessageRoleEnum.User,
+					content: `Extract the text relevant to ${input} from all the previous system messages and only return that text, do not return anything else.`,
+					// name,
+				},]
+		})
+	})
+	const { choices, error } = await completionResponse.json();
+	const content = choices[0]?.message?.content;
+	return content
+}
 
 export const actions = {
 	default: async ({ request, platform }) => {
@@ -12,16 +37,16 @@ export const actions = {
 		const message = data.get('message');
 		const pastRoles = data.getAll('pastRoles');
 		let pastContents = data.getAll('pastContents');
-		let allMessages = pastRoles.map((role, index) => ({role, content: pastContents[index]}))
-	  let api_key = platform?.env?.OPENAI_KEY;
-	  if (!api_key) {
-	    return {
+		let allMessages = pastRoles.map((role, index) => ({ role, content: pastContents[index] }))
+		let api_key = platform?.env?.OPENAI_KEY;
+		if (!api_key) {
+			return {
 				messages: [
 					...allMessages,
-					{ role: ChatCompletionRequestMessageRoleEnum.Assistant, content: "test"}
+					{ role: ChatCompletionRequestMessageRoleEnum.Assistant, content: "test" }
 				]
-	    }
-	  }
+			}
+		}
 		try {
 			const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
 				method: "POST",
@@ -44,21 +69,19 @@ export const actions = {
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						vector: embedding,
-						limit: 10,
+						limit: 100,
 						with_payload: true,
 					}),
 				}
 			);
 			const { result: qdrantPayloads } = await qdrantResponse.json();
+			let relatedText = suggestionsFromQdrant(message, qdrantPayloads, api_key);
 			allMessages = [
 				...allMessages,
 				{
 					role: ChatCompletionRequestMessageRoleEnum.System,
 					content: `グラッドキューブのチャット履歴の中にユーザーの質問に関連した内容は以下です
-      ${qdrantPayloads.map(
-						({ payload }: { payload: { room: string; message: string } }) =>
-							`ルーム:${payload.room};メッセージ：${payload.message}`
-					)}`,
+${relatedText}`,
 				},
 				{
 					role: ChatCompletionRequestMessageRoleEnum.User,
@@ -78,22 +101,22 @@ export const actions = {
 					messages: allMessages,
 				})
 			})
-	    const {choices, error} = await completionResponse.json();
+			const { choices, error } = await completionResponse.json();
 			const content = choices[0]?.message?.content;
-	    allMessages = [
-	      ...allMessages,
-	      {
-	        role: ChatCompletionRequestMessageRoleEnum.Assistant,
-	        content,
-	      },
-	    ];
+			allMessages = [
+				...allMessages,
+				{
+					role: ChatCompletionRequestMessageRoleEnum.Assistant,
+					content,
+				},
+			];
 			return {
 				messages: allMessages
 			}
 
-		} catch(e) {
+		} catch (e) {
 			console.log(e)
-			return {error: e, messages: allMessages}
+			return { error: e, messages: allMessages }
 		}
 	}
 } satisfies Actions;
