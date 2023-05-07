@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { ChatCompletionResponseMessageRoleEnum } from 'openai';
-  import { enhance } from '$app/forms';
+  import { ChatCompletionResponseMessageRoleEnum } from "openai";
+  import { enhance } from "$app/forms";
+  import { invalidateAll } from "$app/navigation";
 
   import { INITIAL_MESSAGES } from "$lib/constants";
   import BotMessage from "$lib/BotMessage.svelte";
@@ -109,11 +110,18 @@
     class="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0"
     method="POST"
     use:enhance={() => {
-      return async ({ result: {data, type} }) => {
-        if (type === 'success') {
+      return async ({ result: { data, type } }) => {
+        await invalidateAll();
+        if (type === "success") {
           messages = [...data.messages];
-  			} else if (type === 'failure') {
-          messages = [...messages, { role: ChatCompletionResponseMessageRoleEnum.Assistant, content: `申し訳ありませんでした。エラーが起こりました, error: ${data.error}`}]
+        } else if (type === "failure") {
+          messages = [
+            ...messages,
+            {
+              role: ChatCompletionResponseMessageRoleEnum.Assistant,
+              content: `申し訳ありませんでした。エラーが起こりました, error: ${data.error}`,
+            },
+          ];
         }
       };
     }}
@@ -140,19 +148,19 @@
           </svg>
         </button>
       </span>
-      {#each messages as {content, role}, index}
+      {#each messages as { content, role }, index}
         <input
-            id={`roles[${index}]`}
-            name={`pastRoles`}
-            type="hidden"
-            value={role}
-          />
+          id={`roles[${index}]`}
+          name={`pastRoles`}
+          type="hidden"
+          value={role}
+        />
         <input
-            id={`contents[${index}]`}
-            name={`pastContents`}
-            type="hidden"
-            value={content}
-          />
+          id={`contents[${index}]`}
+          name={`pastContents`}
+          type="hidden"
+          value={content}
+        />
       {/each}
       <input
         id="message"

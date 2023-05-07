@@ -13,7 +13,6 @@ export const actions = {
 		const pastRoles = data.getAll('pastRoles');
 		let pastContents = data.getAll('pastContents');
 		let allMessages = pastRoles.map((role, index) => ({role, content: pastContents[index]}))
-		console.log(platform);
 	  let api_key = platform?.env?.OPENAI_KEY;
 	  if (!api_key) {
 	    return {
