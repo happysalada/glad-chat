@@ -128,11 +128,11 @@
       message = "";
       loading = true;
       return async ({ result: { data, type } }) => {
+        loading = false;
         if (type === "success") {
           console.log(data.messages);
           messages = [...data.messages];
         } else if (type === "failure") {
-          loading = false;
           messages = [
             ...messages,
             {
