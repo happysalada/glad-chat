@@ -103,7 +103,8 @@ ${content}`,
 				})
 			})
 			const { choices, error } = await completionResponse.json();
-			const content = choices[0]?.message?.content;
+			const content = choices?.[0]?.message?.content;
+			if (error) throw error;
 			allMessages = [
 				...allMessages,
 				{
