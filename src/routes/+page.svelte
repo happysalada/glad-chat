@@ -1,7 +1,6 @@
 <script lang="ts">
   import { ChatCompletionResponseMessageRoleEnum } from "openai";
   import { enhance } from "$app/forms";
-  import { invalidateAll } from "$app/navigation";
 
   import { INITIAL_MESSAGES } from "$lib/constants";
   import BotMessage from "$lib/BotMessage.svelte";
@@ -110,8 +109,9 @@
     class="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0"
     method="POST"
     use:enhance={() => {
+      message = "";
+      console.log("loading")
       return async ({ result: { data, type } }) => {
-        await invalidateAll();
         if (type === "success") {
           messages = [...data.messages];
         } else if (type === "failure") {
