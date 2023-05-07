@@ -1,5 +1,4 @@
 import type { Actions } from './$types';
-import { PUBLIC_PROXY_URL } from "$env/static/public";
 import {
 	ChatCompletionRequestMessageRoleEnum,
 } from "openai";
@@ -75,7 +74,7 @@ export const actions = {
 				}
 			);
 			const { result: qdrantPayloads } = await qdrantResponse.json();
-			const { content, error} = await suggestionsFromQdrant(message, qdrantPayloads, api_key);
+			let { content, error} = await suggestionsFromQdrant(message, qdrantPayloads, api_key);
 			if (error) throw error;
 			allMessages = [
 				...allMessages,
@@ -102,9 +101,9 @@ ${content}`,
 					messages: allMessages,
 				})
 			})
-			const { choices, error } = await completionResponse.json();
-			const content = choices?.[0]?.message?.content;
-			if (error) throw error;
+			let completionResult = await completionResponse.json();
+			content = completionResult.choices?.[0]?.message?.content;
+			if (completionResult.error) throw error;
 			allMessages = [
 				...allMessages,
 				{
