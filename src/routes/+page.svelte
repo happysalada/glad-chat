@@ -1,33 +1,24 @@
 <script lang="ts">
+  import type { PageData } from "./$types";
+
   import {
-    Configuration,
-    OpenAIApi,
     ChatCompletionRequestMessageRoleEnum,
   } from "openai";
-  import type { ChatCompletionRequestMessage } from "openai";
+
 	import { PUBLIC_PROXY_URL } from "$env/static/public";
+  import { enhance } from '$app/forms';
 
   import BotMessage from "$lib/BotMessage.svelte";
   import UserMessage from "$lib/UserMessage.svelte";
 
-  let messages: ChatCompletionRequestMessage[] = [
-    {
-      role: ChatCompletionRequestMessageRoleEnum.System,
-      content:
-        "貴方は株式会社グラッドキューブの全社員のアシスタントです。社員の質問にできるだけ的確の答えをください",
-    },
-    {
-      role: ChatCompletionRequestMessageRoleEnum.Assistant,
-      content:
-        "私は株式会社グラッドキューブの全社員のアシスタントです。過去のチャット履歴を学習しました。質問ください",
-    },
-  ];
+  export let data: PageData;
+
   let message = "";
   let from = "";
-  // TODO figure out which name could work with ^[a-zA-Z0-9_-]{1,64}$'
-  $: name = from.length == 0 ? "glad-cube_employee" : "glad-cube_employee";
   // const el = document.getElementById("messages");
   // el.scrollTop = el.scrollHeight;
+
+  
 
   async function sendMessage(): Promise<void> {
     // create a copy to clear the prompt for better UX
@@ -181,7 +172,11 @@
       {/if}
     {/each}
   </div>
-  <div class="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0">
+  <form
+    class="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0"
+    method="POST"
+    use:enhance
+  >
     <div class="relative flex">
       <span class="absolute inset-y-0 flex items-center">
         <button
@@ -204,7 +199,23 @@
           </svg>
         </button>
       </span>
+      {#each messages as {content, role}, index}
+        <input
+          id="message"
+          name={`pastMessages[${index}][role]`}
+          type="hidden"
+          value={role}
+        />
+        <input
+            id="message"
+            name={`pastMessages[${index}][content]`}
+            type="hidden"
+            value={content}
+          />
+      {/each}
       <input
+        id="message"
+        name="message"
         type="text"
         placeholder="メッセージを書く"
         bind:value={message}
@@ -278,7 +289,6 @@
           </svg>
         </button>
         <button
-          type="button"
           on:click={sendMessage}
           disabled={message == ""}
           class:bg-gray-500={message == ""}
@@ -300,7 +310,7 @@
         </button>
       </div>
     </div>
-  </div>
+  </form>
 </div>
 
 <style>
