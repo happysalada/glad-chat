@@ -68,7 +68,7 @@ export const actions = {
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						vector: embedding,
-						limit: 100,
+						limit: 10,
 						with_payload: true,
 					}),
 				}
@@ -76,6 +76,7 @@ export const actions = {
 			const { result: qdrantPayloads } = await qdrantResponse.json();
 			let { content, error} = await suggestionsFromQdrant(message, qdrantPayloads, api_key);
 			if (error) throw error;
+			console.log("content", content)
 			allMessages = [
 				...allMessages,
 				{
