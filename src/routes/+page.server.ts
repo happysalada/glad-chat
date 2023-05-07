@@ -68,7 +68,7 @@ export const actions = {
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						vector: embedding,
-						limit: 10,
+						limit: 30,
 						with_payload: true,
 					}),
 				}
