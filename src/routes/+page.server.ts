@@ -9,7 +9,7 @@ import {
 // import models from '@dqbd/tiktoken/model_to_encoding.json';
 // import { getJson } from "serpapi";
 
-const suggestionsFromQdrant = async (input: string, payloads: { payload: {room: string, message: string }}[], apiKey: string): Promise<string> => {
+const suggestionsFromQdrant = async (input: string, payloads: { payload: {room: string, message: string }}[], apiKey: string): Promise<{content: string, error: undefined} | { content: undefined, error: string}> => {
 	const completionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
 		method: "POST",
 		headers: {
@@ -27,8 +27,8 @@ const suggestionsFromQdrant = async (input: string, payloads: { payload: {room: 
 		})
 	})
 	const { choices, error } = await completionResponse.json();
-	const content = choices[0]?.message?.content;
-	return content
+	const content = choices?.[0]?.message?.content;
+	return {content, error}
 }
 
 export const actions = {
@@ -75,13 +75,14 @@ export const actions = {
 				}
 			);
 			const { result: qdrantPayloads } = await qdrantResponse.json();
-			let relatedText = await suggestionsFromQdrant(message, qdrantPayloads, api_key);
+			const { content, error} = await suggestionsFromQdrant(message, qdrantPayloads, api_key);
+			if (error) throw error;
 			allMessages = [
 				...allMessages,
 				{
 					role: ChatCompletionRequestMessageRoleEnum.System,
 					content: `グラッドキューブのチャット履歴の中にユーザーの質問に関連した内容は以下です
-${relatedText}`,
+${content}`,
 				},
 				{
 					role: ChatCompletionRequestMessageRoleEnum.User,
