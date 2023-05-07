@@ -4,40 +4,39 @@ import {
   ChatCompletionRequestMessageRoleEnum,
 } from "openai";
 // import { getJson } from "serpapi";
-const INITIAL_MESSAGES: ChatCompletionRequestMessage[] = [
-  {
-    role: ChatCompletionRequestMessageRoleEnum.System,
-    content:
-      "貴方は株式会社グラッドキューブの全社員のアシスタントです。社員の質問にできるだけ的確の答えをください",
-  },
-  {
-    role: ChatCompletionRequestMessageRoleEnum.Assistant,
-    content:
-      "私は株式会社グラッドキューブの全社員のアシスタントです。過去のチャット履歴を学習しました。質問ください",
-  },
-];
 
-
-export function load() {
-	return {
-		messages: INITIAL_MESSAGES,
-	};
-}
 
 export const actions = {
-	default: async ({ cookies, request, platform }) => {
+	default: async ({ request, platform }) => {
+		const data = await request.formData();
+		const message = data.get('message');
+		const pastRoles = data.getAll('pastRoles');
+		let pastContents = data.getAll('pastContents');
+		let allMessages = pastRoles.map((role, index) => ({role, content: pastContents[index]}))
+	  let api_key = platform?.env?.OPENAI_KEY;
+	  if (!api_key) {
+	    return {
+				messages: [
+					...allMessages,
+					{ role: ChatCompletionRequestMessageRoleEnum.Assistant, content: "test"}
+				]
+	    }
+	  }
 		try {
-			const data = await request.formData();
-			const message = data.get('message');
-			let allMessages = data.get('pastMessages');
-			const embeddingResponse = await fetch(`${PUBLIC_PROXY_URL}/embeddings`, {
+			const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					"Authorization": `Bearer ${api_key}`
+				},
 				body: JSON.stringify({
+					model: "text-embedding-ada-002",
 					input: message,
 				})
-			});
-			const { embedding } = await embeddingResponse.json();
+			})
+
+			const { data: embeddingData } = await embeddingResponse.json();
+			const embedding = embeddingData[0].embedding;
 			const qdrantResponse = await fetch(
 				"https://qdrant.sassy.technology/collections/gc_first_test/points/search",
 				{
@@ -68,14 +67,19 @@ export const actions = {
 				},
 			];
 
-	    const completionResponse = await fetch(`${PUBLIC_PROXY_URL}/chat`, {
-	        method: "POST",
-	        headers: { "Content-Type": "application/json" },
-	        body: JSON.stringify({
-	          pastMessages: allMessages,
-	        })
-	    });
-	    const {content} = await completionResponse.json();
+			const completionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"Authorization": `Bearer ${api_key}`
+				},
+				body: JSON.stringify({
+					model: "gpt-3.5-turbo",
+					messages: allMessages,
+				})
+			})
+	    const {choices, error} = await completionResponse.json();
+			const content = choices[0]?.message?.content;
 	    allMessages = [
 	      ...allMessages,
 	      {
@@ -89,7 +93,7 @@ export const actions = {
 
 		} catch(e) {
 			console.log(e)
-			return {error: e}
+			return {error: e, messages: allMessages}
 		}
 	}
 } satisfies Actions;

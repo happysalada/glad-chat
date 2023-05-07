@@ -1,83 +1,16 @@
 <script lang="ts">
-  import type { PageData } from "./$types";
-
-  import {
-    ChatCompletionRequestMessageRoleEnum,
-  } from "openai";
-
-	import { PUBLIC_PROXY_URL } from "$env/static/public";
+  import { ChatCompletionResponseMessageRoleEnum } from 'openai';
   import { enhance } from '$app/forms';
 
+  import { INITIAL_MESSAGES } from "$lib/constants";
   import BotMessage from "$lib/BotMessage.svelte";
   import UserMessage from "$lib/UserMessage.svelte";
 
-  export let data: PageData;
-
   let message = "";
   let from = "";
+  let messages = INITIAL_MESSAGES;
   // const el = document.getElementById("messages");
   // el.scrollTop = el.scrollHeight;
-
-  
-
-  async function sendMessage(): Promise<void> {
-    // create a copy to clear the prompt for better UX
-    const messageCopy = message;
-    message = "";
-    const embeddingResponse = await fetch(`${PUBLIC_PROXY_URL}/embeddings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          input: message,
-        })
-    });
-    const {embedding} = await embeddingResponse.json();
-    const qdrantResponse = await fetch(
-      "https://qdrant.sassy.technology/collections/gc_first_test/points/search",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vector: embedding,
-          limit: 10,
-          with_payload: true,
-        }),
-      }
-    );
-    const { result: qdrantPayloads } = await qdrantResponse.json();
-    console.log("related chats", qdrantPayloads);
-    messages = [
-      ...messages,
-      {
-        role: ChatCompletionRequestMessageRoleEnum.System,
-        content: `グラッドキューブのチャット履歴の中にユーザーの質問に関連した内容は以下です
-      ${qdrantPayloads.map(
-        ({ payload }: { payload: { room: string; message: string } }) =>
-          `ルーム:${payload.room};メッセージ：${payload.message}`
-      )}`,
-      },
-      {
-        role: ChatCompletionRequestMessageRoleEnum.User,
-        content: messageCopy,
-        name,
-      },
-    ];
-    const completionResponse = await fetch(`${PUBLIC_PROXY_URL}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages,
-        })
-    });
-    const {content} = await completionResponse.json();
-    messages = [
-      ...messages,
-      {
-        role: ChatCompletionRequestMessageRoleEnum.Assistant,
-        content,
-      },
-    ];
-  }
 
   function exportJson() {
     const jsonString = JSON.stringify(messages, null, 2);
@@ -175,7 +108,15 @@
   <form
     class="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0"
     method="POST"
-    use:enhance
+    use:enhance={() => {
+      return async ({ result: {data, type} }) => {
+        if (type === 'success') {
+          messages = [...data.messages];
+  			} else if (type === 'failure') {
+          messages = [...messages, { role: ChatCompletionResponseMessageRoleEnum.Assistant, content: `申し訳ありませんでした。エラーが起こりました, error: ${data.error}`}]
+        }
+      };
+    }}
   >
     <div class="relative flex">
       <span class="absolute inset-y-0 flex items-center">
@@ -201,14 +142,14 @@
       </span>
       {#each messages as {content, role}, index}
         <input
-          id="message"
-          name={`pastMessages[${index}][role]`}
-          type="hidden"
-          value={role}
-        />
+            id={`roles[${index}]`}
+            name={`pastRoles`}
+            type="hidden"
+            value={role}
+          />
         <input
-            id="message"
-            name={`pastMessages[${index}][content]`}
+            id={`contents[${index}]`}
+            name={`pastContents`}
             type="hidden"
             value={content}
           />
@@ -219,9 +160,6 @@
         type="text"
         placeholder="メッセージを書く"
         bind:value={message}
-        on:keydown={(e) => {
-          if (e.key === "Enter" && e.shiftKey && message != "") sendMessage();
-        }}
         class="w-full focus:outline-none focus:placeholder-gray-400 text-gray-600 placeholder-gray-600 pl-12 bg-gray-200 rounded-md py-3"
       />
       <div class="absolute right-0 items-center inset-y-0 hidden sm:flex">
@@ -289,7 +227,6 @@
           </svg>
         </button>
         <button
-          on:click={sendMessage}
           disabled={message == ""}
           class:bg-gray-500={message == ""}
           class:bg-blue-500={message != ""}
