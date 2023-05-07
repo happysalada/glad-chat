@@ -75,7 +75,7 @@ export const actions = {
 				}
 			);
 			const { result: qdrantPayloads } = await qdrantResponse.json();
-			let relatedText = suggestionsFromQdrant(message, qdrantPayloads, api_key);
+			let relatedText = await suggestionsFromQdrant(message, qdrantPayloads, api_key);
 			allMessages = [
 				...allMessages,
 				{
