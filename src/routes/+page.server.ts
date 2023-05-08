@@ -2,13 +2,30 @@ import type { Actions } from './$types';
 import {
 	ChatCompletionRequestMessageRoleEnum,
 } from "openai";
-// import { Tiktoken, ModelData } from '@dqbd/tiktoken/lite';
-// import { load } from '@dqbd/tiktoken/load';
-// import registry from '@dqbd/tiktoken/registry.json';
-// import models from '@dqbd/tiktoken/model_to_encoding.json';
+import { Tiktoken } from "@dqbd/tiktoken/lite/init";
+import model from "@dqbd/tiktoken/encoders/cl100k_base.json";
 // import { getJson } from "serpapi";
 
-const suggestionsFromQdrant = async (input: string, payloads: { payload: {room: string, message: string }}[], apiKey: string): Promise<{content: string, error: undefined} | { content: undefined, error: string}> => {
+const splitInMaxTokens = (list: string[], encoder: Tiktoken, max: number): string[] => {
+	let { chunks, currentText} = list.reduce(({chunks, currentText, currentTokens}, text) => {
+		let newTokens = encoder.encode(text);
+		if (currentTokens + newTokens.length < max) {
+			currentTokens += newTokens.length;
+			currentText += text;
+			return {chunks, currentTokens, currentText}
+		} else {
+			chunks = [...chunks, currentText];
+			return {chunks, currentText: text, currentTokens: newTokens.length}
+		}
+	}, {chunks: [], currentText: '', currentTokens: 0})
+	if (currentText !== '') {
+		chunks = [...chunks, currentText]
+	}
+	return chunks
+}
+
+const filterForQuestion = async (text: string, input: string, apiKey: string): Promise<{ content: string, error: undefined } | { content: undefined, error: string }> => {
+
 	const completionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
 		method: "POST",
 		headers: {
@@ -17,17 +34,18 @@ const suggestionsFromQdrant = async (input: string, payloads: { payload: {room: 
 		},
 		body: JSON.stringify({
 			model: "gpt-3.5-turbo",
-			messages: [...payloads.map(   ({ payload }) => ({ role: ChatCompletionRequestMessageRoleEnum.System, content: `ルーム:${payload.room};メッセージ：${payload.message}`})),
-				{
-					role: ChatCompletionRequestMessageRoleEnum.User,
-					content: `Extract the text relevant to ${input} from all the previous system messages and only return that text, do not return anything else.`,
-					// name,
-				},]
+			messages: [{
+				role: ChatCompletionRequestMessageRoleEnum.User,
+				content: `Extract the content relevant to ${input} from the following text only return that text, do not return anything else. Return an empty message if nothing is relevant to the input.
+
+${text}`,
+				// name,
+			},]
 		})
 	})
 	const { choices, error } = await completionResponse.json();
 	const content = choices?.[0]?.message?.content;
-	return {content, error}
+	return { content, error }
 }
 
 export const actions = {
@@ -68,21 +86,37 @@ export const actions = {
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						vector: embedding,
-						limit: 10,
+						limit: 100,
 						with_payload: true,
 					}),
 				}
 			);
 			const { result: qdrantPayloads } = await qdrantResponse.json();
-			let { content, error} = await suggestionsFromQdrant(message, qdrantPayloads, api_key);
-			if (error) throw error;
-			console.log("content", content)
+	    const encoder = new Tiktoken(
+	      model.bpe_ranks,
+	      model.special_tokens,
+	      model.pat_str
+	    );
+			const contents: string[] = splitInMaxTokens(qdrantPayloads.map(({ payload }: { payload: { room: string, message: string } }) => `ルーム:${payload.room};メッセージ：${payload.message}`), encoder, 4000);
+			let suggestions = await Promise.all(contents.map(content => filterForQuestion(content, message, api_key)))
+			let relevantText = suggestions.filter(({ content, error }) => {
+				if (!content) {
+					console.log(error)
+					return false
+				} else {
+					return true
+				}
+			}).reduce((acc, {content}) => acc + content, '');
+
+
+			if (relevantText == '') throw new Error('empty relevant text');
+			console.log("content", relevantText)
 			allMessages = [
 				...allMessages,
 				{
 					role: ChatCompletionRequestMessageRoleEnum.System,
 					content: `グラッドキューブのチャット履歴の中にユーザーの質問に関連した内容は以下です
-${content}`,
+${relevantText}`,
 				},
 				{
 					role: ChatCompletionRequestMessageRoleEnum.User,
