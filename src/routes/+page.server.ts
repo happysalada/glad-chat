@@ -101,11 +101,11 @@ export const actions = {
 	  //     model.pat_str
 	  //   );
 			const segmenter = new TinySegmenter();
-			const contents: string[] = splitInMaxTokens(qdrantPayloads.map(({ payload }: { payload: { room: string, message: string } }) => `ルーム:${payload.room};メッセージ：${payload.message}`), segmenter, 3000);
+			const contents: string[] = splitInMaxTokens(qdrantPayloads.map(({ payload }: { payload: { room: string, message: string } }) => `ルーム:${payload.room};メッセージ：${payload.message}`), segmenter, 2500);
 			let suggestions = await Promise.all(contents.map(content => filterForQuestion(content, message, api_key)))
 			let relevantText = suggestions.filter(({ content, error }) => {
 				if (!content) {
-					console.log(error)
+					console.log("error", error)
 					return false
 				} else {
 					return true
@@ -141,8 +141,8 @@ ${relevantText}`,
 				})
 			})
 			let completionResult = await completionResponse.json();
-			content = completionResult.choices?.[0]?.message?.content;
-			if (completionResult.error) throw error;
+			let content = completionResult.choices?.[0]?.message?.content;
+			if (completionResult.error) throw completionResult.error;
 			allMessages = [
 				...allMessages,
 				{
