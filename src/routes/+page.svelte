@@ -130,8 +130,7 @@
       return async ({ result: { data, type } }) => {
         loading = false;
         if (type === "success") {
-          console.log(data.messages);
-          messages = [...data.messages];
+          messages = [...messages, data.content];
         } else if (type === "failure") {
           messages = [
             ...messages,

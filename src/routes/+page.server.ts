@@ -8,7 +8,7 @@ import {
 import TinySegmenter from "tiny-segmenter";
 
 const splitInMaxTokens = (list: string[], segmenter: TinySegmenter, max: number): string[] => {
-	let { chunks, currentText} = list.reduce(({chunks, currentText, currentTokens}, text) => {
+	let { chunks, currentText} = list.reduce(({chunks, currentText, currentTokens}: {chunks: string[], currentText: string, currentTokens: number}, text) => {
 		// let newTokens = encoder.encode(text);
 		let newTokens = segmenter.segment(text);
 		if (currentTokens + newTokens.length < max) {
@@ -125,18 +125,19 @@ export const actions = {
 
 			if (relevantText == '') throw new Error('empty relevant text');
 			console.log("content", relevantText)
-			allMessages = [
-				...allMessages,
-				{
-					role: ChatCompletionRequestMessageRoleEnum.System,
-					content: `グラッドキューブのチャット履歴の中にユーザーの質問に関連した内容は以下です
-${relevantText}`,
-				},
+			let messagesForCompletion = [
+			  {
+			    role: ChatCompletionRequestMessageRoleEnum.System,
+			    content: "貴方は株式会社グラッドキューブの全社員のアシスタントです"
+			  },
 				{
 					role: ChatCompletionRequestMessageRoleEnum.User,
 					content: message,
-					// name,
 				},
+			  {
+			    role: ChatCompletionRequestMessageRoleEnum.System,
+			    content: relevantText,
+			  },
 			];
 
 			const completionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -147,21 +148,14 @@ ${relevantText}`,
 				},
 				body: JSON.stringify({
 					model: "gpt-3.5-turbo",
-					messages: allMessages,
+					messages: messagesForCompletion,
 				})
 			})
 			let completionResult = await completionResponse.json();
 			let content = completionResult.choices?.[0]?.message?.content;
 			if (completionResult.error) throw completionResult.error;
-			allMessages = [
-				...allMessages,
-				{
-					role: ChatCompletionRequestMessageRoleEnum.Assistant,
-					content,
-				},
-			];
 			return {
-				messages: allMessages
+				content
 			}
 
 		} catch (e) {
