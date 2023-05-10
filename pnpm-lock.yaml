@@ -10,6 +10,9 @@ dependencies:
   surrealdb.js:
     specifier: ^0.7.1
     version: 0.7.1(ws@8.13.0)
+  tiny-segmenter:
+    specifier: ^0.2.0
+    version: 0.2.0
 
 devDependencies:
   '@sveltejs/adapter-cloudflare':
@@ -3150,6 +3153,10 @@ packages:
       globalyzer: 0.1.0
       globrex: 0.1.2
     dev: true
+
+  /tiny-segmenter@0.2.0:
+    resolution: {integrity: sha512-m+aTJQ/CUBKurLaJRpLmJiwcL+Gpkzft5ZYnRU9AkuO45Y/k/2iJmuLEbN1XLrq6N3kDVyIUCCeqRzQx0feBag==}
+    dev: false
 
   /to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}

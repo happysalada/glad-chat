@@ -2,13 +2,15 @@ import type { Actions } from './$types';
 import {
 	ChatCompletionRequestMessageRoleEnum,
 } from "openai";
-import { Tiktoken } from "@dqbd/tiktoken/lite/init";
-import model from "@dqbd/tiktoken/encoders/cl100k_base.json";
-// import { getJson } from "serpapi";
+// import { Tiktoken, init } from "@dqbd/tiktoken/lite/init";
+// import wasm from "@dqbd/tiktoken/lite/tiktoken_bg.wasm";
+// import model from "@dqbd/tiktoken/encoders/cl100k_base.json";
+import TinySegmenter from "tiny-segmenter";
 
-const splitInMaxTokens = (list: string[], encoder: Tiktoken, max: number): string[] => {
+const splitInMaxTokens = (list: string[], segmenter: TinySegmenter, max: number): string[] => {
 	let { chunks, currentText} = list.reduce(({chunks, currentText, currentTokens}, text) => {
-		let newTokens = encoder.encode(text);
+		// let newTokens = encoder.encode(text);
+		let newTokens = segmenter.segment(text);
 		if (currentTokens + newTokens.length < max) {
 			currentTokens += newTokens.length;
 			currentText += text;
@@ -92,12 +94,14 @@ export const actions = {
 				}
 			);
 			const { result: qdrantPayloads } = await qdrantResponse.json();
-	    const encoder = new Tiktoken(
-	      model.bpe_ranks,
-	      model.special_tokens,
-	      model.pat_str
-	    );
-			const contents: string[] = splitInMaxTokens(qdrantPayloads.map(({ payload }: { payload: { room: string, message: string } }) => `ルーム:${payload.room};メッセージ：${payload.message}`), encoder, 4000);
+			// await init((imports) => WebAssembly.instantiate(wasm, imports));
+	  //   const encoder = new Tiktoken(
+	  //     model.bpe_ranks,
+	  //     model.special_tokens,
+	  //     model.pat_str
+	  //   );
+			const segmenter = new TinySegmenter();
+			const contents: string[] = splitInMaxTokens(qdrantPayloads.map(({ payload }: { payload: { room: string, message: string } }) => `ルーム:${payload.room};メッセージ：${payload.message}`), segmenter, 3000);
 			let suggestions = await Promise.all(contents.map(content => filterForQuestion(content, message, api_key)))
 			let relevantText = suggestions.filter(({ content, error }) => {
 				if (!content) {

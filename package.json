@@ -47,6 +47,7 @@
 	"dependencies": {
 		"@dqbd/tiktoken": "^1.0.7",
 		"openai": "^3.2.1",
-		"surrealdb.js": "^0.7.1"
+		"surrealdb.js": "^0.7.1",
+		"tiny-segmenter": "^0.2.0"
 	}
 }
