@@ -38,7 +38,7 @@ const filterForQuestion = async (text: string, input: string, apiKey: string): P
 			model: "gpt-3.5-turbo",
 			messages: [{
 				role: ChatCompletionRequestMessageRoleEnum.User,
-				content: `Extract the content relevant to ${input} from the following text only return that text, do not return anything else. Return an empty message if nothing is relevant to the input.
+				content: `Extract the content relevant to "${input}" from text that follows, only return that text in japanese, do not return anything else, return an empty message if nothing is relevant.
 
 ${text}`,
 				// name,
@@ -101,7 +101,7 @@ export const actions = {
 	  //     model.pat_str
 	  //   );
 			const segmenter = new TinySegmenter();
-			const contents: string[] = splitInMaxTokens(qdrantPayloads.map(({ payload }: { payload: { room: string, message: string } }) => `ルーム:${payload.room};メッセージ：${payload.message}`), segmenter, 2500);
+			const contents: string[] = splitInMaxTokens(qdrantPayloads.map(({ payload }: { payload: { room: string, message: string } }) => `ルーム:${payload.room};メッセージ：${payload.message}`), segmenter, 2000);
 			let suggestions = await Promise.all(contents.map(content => filterForQuestion(content, message, api_key)))
 			let relevantText = suggestions.filter(({ content, error }) => {
 				if (!content) {
