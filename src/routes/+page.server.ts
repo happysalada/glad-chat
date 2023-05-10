@@ -38,9 +38,19 @@ const filterForQuestion = async (text: string, input: string, apiKey: string): P
 			model: "gpt-3.5-turbo",
 			messages: [{
 				role: ChatCompletionRequestMessageRoleEnum.User,
-				content: `Extract the content relevant to "${input}" from text that follows, only return that text in japanese, do not return anything else, return an empty message if nothing is relevant.
+				content: `
+以下のリクエストで
+"""
+${input}
+"""
 
-${text}`,
+以下のテキストのなかにリクエストに関連した内容を省略してください
+"""
+${text}
+"""
+
+関連内容
+"""`
 				// name,
 			},]
 		})
