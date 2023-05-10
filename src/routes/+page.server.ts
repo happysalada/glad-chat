@@ -113,14 +113,14 @@ export const actions = {
 			const segmenter = new TinySegmenter();
 			const contents: string[] = splitInMaxTokens(qdrantPayloads.map(({ payload }: { payload: { room: string, message: string } }) => `ルーム:${payload.room};メッセージ：${payload.message}`), segmenter, 2000);
 			let suggestions = await Promise.all(contents.map(content => filterForQuestion(content, message, api_key)))
-			let relevantText = suggestions.filter(({ content, error }) => {
+			let relevantText = splitInMaxTokens(suggestions.reduce((acc: string[], {content, error}) => {
 				if (!content) {
 					console.log("error", error)
-					return false
+					return acc
 				} else {
-					return true
+					return [...acc, content]
 				}
-			}).reduce((acc, {content}) => acc + content, '');
+			}, []), segmenter, 2000).join(" ");
 
 
 			if (relevantText == '') throw new Error('empty relevant text');
