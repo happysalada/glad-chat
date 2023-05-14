@@ -2,24 +2,23 @@ import type { Actions } from './$types';
 import {
 	ChatCompletionRequestMessageRoleEnum,
 } from "openai";
-// import { Tiktoken, init } from "@dqbd/tiktoken/lite/init";
-// import wasm from "@dqbd/tiktoken/lite/tiktoken_bg.wasm";
-// import model from "@dqbd/tiktoken/encoders/cl100k_base.json";
-import TinySegmenter from "tiny-segmenter";
+import { Tiktoken, init } from "@dqbd/tiktoken/lite/init";
+import * as wasm from "@dqbd/tiktoken/lite/tiktoken_bg.wasm";
+import model from "@dqbd/tiktoken/encoders/cl100k_base.json";
 
-const splitInMaxTokens = (list: string[], segmenter: TinySegmenter, max: number): string[] => {
-	let { chunks, currentText} = list.reduce(({chunks, currentText, currentTokens}: {chunks: string[], currentText: string, currentTokens: number}, text) => {
+const mergeMaxTokens = (list: string[], encoder: Tiktoken, max: number): string[] => {
+	let { chunks, currentText } = list.reduce(({ chunks, currentText, currentTokens }: { chunks: string[], currentText: string, currentTokens: number }, text) => {
 		// let newTokens = encoder.encode(text);
-		let newTokens = segmenter.segment(text);
+		let newTokens = encoder.encode(text);
 		if (currentTokens + newTokens.length < max) {
 			currentTokens += newTokens.length;
 			currentText += text;
-			return {chunks, currentTokens, currentText}
+			return { chunks, currentTokens, currentText }
 		} else {
 			chunks = [...chunks, currentText];
-			return {chunks, currentText: text, currentTokens: newTokens.length}
+			return { chunks, currentText: text, currentTokens: newTokens.length }
 		}
-	}, {chunks: [], currentText: '', currentTokens: 0})
+	}, { chunks: [], currentText: '', currentTokens: 0 })
 	if (currentText !== '') {
 		chunks = [...chunks, currentText]
 	}
@@ -60,11 +59,43 @@ ${text}
 	return { content, error }
 }
 
+
+const summarize = async (text: string, apiKey: string): Promise<{ content: string, error: undefined } | { content: undefined, error: string }> => {
+
+	const completionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"Authorization": `Bearer ${apiKey}`
+		},
+		body: JSON.stringify({
+			model: "gpt-3.5-turbo",
+			messages: [{
+				role: ChatCompletionRequestMessageRoleEnum.User,
+				content: `以下のテキストを省略してください
+"""
+${text}`
+			},]
+		})
+	})
+	const { choices, error } = await completionResponse.json();
+	const content = choices?.[0]?.message?.content;
+	return { content, error }
+}
+
+const filterErrors = ({ error }: {error: string | undefined}) => {
+	if (error) {
+		console.log(error)
+		return false
+	} else {
+		return true
+	}
+};
 export const actions = {
 	default: async ({ request, platform }) => {
 		const data = await request.formData();
 		const message = data.get('message');
-		const pastRoles = data.getAll('pastRoles');
+		const pastRoles: ChatCompletionRequestMessageRoleEnum[] = data.getAll('pastRoles');
 		let pastContents = data.getAll('pastContents');
 		let allMessages = pastRoles.map((role, index) => ({ role, content: pastContents[index] }))
 		let api_key = platform?.env?.OPENAI_KEY;
@@ -104,40 +135,36 @@ export const actions = {
 				}
 			);
 			const { result: qdrantPayloads } = await qdrantResponse.json();
-			// await init((imports) => WebAssembly.instantiate(wasm, imports));
-	  //   const encoder = new Tiktoken(
-	  //     model.bpe_ranks,
-	  //     model.special_tokens,
-	  //     model.pat_str
-	  //   );
-			const segmenter = new TinySegmenter();
-			const contents: string[] = splitInMaxTokens(qdrantPayloads.map(({ payload }: { payload: { room: string, message: string } }) => `ルーム:${payload.room};メッセージ：${payload.message}`), segmenter, 2000);
+			await init((imports) => WebAssembly.instantiate(wasm, imports));
+			const encoder = new Tiktoken(
+				model.bpe_ranks,
+				model.special_tokens,
+				model.pat_str
+			);
+			const contents: string[] = mergeMaxTokens(qdrantPayloads.map(({ payload }: { payload: { room: string, message: string } }) => `ルーム:${payload.room};メッセージ：${payload.message}`), encoder, 4000);
+			console.log("merged contents", contents);
 			let suggestions = await Promise.all(contents.map(content => filterForQuestion(content, message, api_key)))
-			let relevantText = splitInMaxTokens(splitInMaxTokens(suggestions.reduce((acc: string[], {content, error}) => {
-				if (!content) {
-					console.log("error", error)
-					return acc
-				} else {
-					return [...acc, content]
-				}
-			}, []), segmenter, 3000), segmenter, 3000).join(" ");
-
-
+			let relevantTexts = await Promise.all(mergeMaxTokens(suggestions.filter(filterErrors).map(response => response.content || ''), encoder, 4000).map((content) => {
+				return summarize(content, api_key)
+			}));
+			console.log("relevant texts", relevantTexts);
+			let relevantText = relevantTexts.filter(filterErrors).map(response => response.content || '').join("\n");
 			if (relevantText == '') throw new Error('empty relevant text');
 			console.log("content", relevantText)
+			console.log("content length", encoder.encode(relevantText).length)
 			let messagesForCompletion = [
-			  {
-			    role: ChatCompletionRequestMessageRoleEnum.System,
-			    content: "貴方は株式会社グラッドキューブの全社員のアシスタントです"
-			  },
+				{
+					role: ChatCompletionRequestMessageRoleEnum.System,
+					content: "貴方は株式会社グラッドキューブの全社員のアシスタントです"
+				},
 				{
 					role: ChatCompletionRequestMessageRoleEnum.User,
 					content: message,
 				},
-			  {
-			    role: ChatCompletionRequestMessageRoleEnum.System,
-			    content: relevantText,
-			  },
+				{
+					role: ChatCompletionRequestMessageRoleEnum.System,
+					content: relevantText,
+				},
 			];
 
 			const completionResponse = await fetch("https://api.openai.com/v1/chat/completions", {

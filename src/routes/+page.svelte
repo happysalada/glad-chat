@@ -129,9 +129,15 @@
       loading = true;
       return async ({ result: { data, type } }) => {
         loading = false;
-        console.log("data", data)
+        console.log("data", data);
         if (type === "success" && data.content) {
-          messages = [...messages, data.content];
+          messages = [
+            ...messages,
+            {
+              role: ChatCompletionResponseMessageRoleEnum.Assistant,
+              content: data.content,
+            },
+          ];
         } else if (type === "failure" || data.error) {
           messages = [
             ...messages,

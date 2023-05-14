@@ -10,17 +10,14 @@ dependencies:
   surrealdb.js:
     specifier: ^0.7.1
     version: 0.7.1(ws@8.13.0)
-  tiny-segmenter:
-    specifier: ^0.2.0
-    version: 0.2.0
 
 devDependencies:
   '@sveltejs/adapter-cloudflare':
     specifier: ^2.2.2
-    version: 2.2.2(@sveltejs/kit@1.16.2)
+    version: 2.2.2(@sveltejs/kit@1.16.3)
   '@sveltejs/kit':
-    specifier: ^1.16.2
-    version: 1.16.2(svelte@3.59.1)(vite@4.3.5)
+    specifier: ^1.16.3
+    version: 1.16.3(svelte@3.59.1)(vite@4.3.5)
   '@tailwindcss/forms':
     specifier: ^0.5.3
     version: 0.5.3(tailwindcss@3.3.2)
@@ -473,19 +470,19 @@ packages:
       picomatch: 2.3.1
     dev: true
 
-  /@sveltejs/adapter-cloudflare@2.2.2(@sveltejs/kit@1.16.2):
+  /@sveltejs/adapter-cloudflare@2.2.2(@sveltejs/kit@1.16.3):
     resolution: {integrity: sha512-B9DUVzbEEfT18Wr9vfhtS3UHQ6VMZrC47aKAvDTNe/C0Js23XdXfWp9ulyJcTUtt7lInJ1213LvAgrRb/358hQ==}
     peerDependencies:
       '@sveltejs/kit': ^1.0.0
     dependencies:
       '@cloudflare/workers-types': 4.20230419.0
-      '@sveltejs/kit': 1.16.2(svelte@3.59.1)(vite@4.3.5)
+      '@sveltejs/kit': 1.16.3(svelte@3.59.1)(vite@4.3.5)
       esbuild: 0.17.18
       worktop: 0.8.0-next.15
     dev: true
 
-  /@sveltejs/kit@1.16.2(svelte@3.59.1)(vite@4.3.5):
-    resolution: {integrity: sha512-yxcpA4nvlVlJ+VyYnj0zD3QN05kfmoh4OyitlPrVG34nnZSHzFpE4eZ33X1A/tc9prslSFRhpM6rWngCs0nM8w==}
+  /@sveltejs/kit@1.16.3(svelte@3.59.1)(vite@4.3.5):
+    resolution: {integrity: sha512-8uv0udYRpVuE1BweFidcWHfL+u2gAANKmvIal1dN/FWPBl7DJYbt9zYEtr3bNTiXystT8Sn0Wp54RfwpbPqHjQ==}
     engines: {node: ^16.14 || >=18}
     hasBin: true
     requiresBuild: true
@@ -506,7 +503,7 @@ packages:
       sirv: 2.0.3
       svelte: 3.59.1
       tiny-glob: 0.2.9
-      undici: 5.22.0
+      undici: 5.22.1
       vite: 4.3.5
     transitivePeerDependencies:
       - supports-color
@@ -3154,10 +3151,6 @@ packages:
       globrex: 0.1.2
     dev: true
 
-  /tiny-segmenter@0.2.0:
-    resolution: {integrity: sha512-m+aTJQ/CUBKurLaJRpLmJiwcL+Gpkzft5ZYnRU9AkuO45Y/k/2iJmuLEbN1XLrq6N3kDVyIUCCeqRzQx0feBag==}
-    dev: false
-
   /to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
     engines: {node: '>=8.0'}
@@ -3220,8 +3213,8 @@ packages:
     hasBin: true
     dev: true
 
-  /undici@5.22.0:
-    resolution: {integrity: sha512-fR9RXCc+6Dxav4P9VV/sp5w3eFiSdOjJYsbtWfd4s5L5C4ogyuVpdKIVHeW0vV1MloM65/f7W45nR9ZxwVdyiA==}
+  /undici@5.22.1:
+    resolution: {integrity: sha512-Ji2IJhFXZY0x/0tVBXeQwgPlLWw13GVzpsWPQ3rV50IFMMof2I55PZZxtm4P6iNq+L5znYN9nSTAq0ZyE6lSJw==}
     engines: {node: '>=14.0'}
     dependencies:
       busboy: 1.6.0
