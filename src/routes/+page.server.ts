@@ -2,7 +2,8 @@ import type { Actions } from './$types';
 import {
 	ChatCompletionRequestMessageRoleEnum,
 } from "openai";
-import { Tiktoken } from "@dqbd/tiktoken/lite";
+import { init, Tiktoken } from "@dqbd/tiktoken/lite/init";
+import * as wasm from "@dqbd/tiktoken/lite/tiktoken_bg.wasm";
 import model from "@dqbd/tiktoken/encoders/cl100k_base.json";
 
 const mergeMaxTokens = (list: string[], encoder: Tiktoken, max: number): string[] => {
@@ -119,6 +120,7 @@ export const actions = {
 				}
 			);
 			const { result: qdrantPayloads } = await qdrantResponse.json();
+			await init((imports) => WebAssembly.instantiate(wasm, imports));
 			const encoder = new Tiktoken(
 				model.bpe_ranks,
 				model.special_tokens,
@@ -148,6 +150,7 @@ export const actions = {
 			if (relevantText == '') throw new Error('empty relevant text');
 			console.log("content", relevantText)
 			console.log("content length", encoder.encode(relevantText).length)
+			encoder.free();
 			let messagesForCompletion = [
 				...allMessages,
 				{
