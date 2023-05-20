@@ -3,7 +3,7 @@ import {
 	ChatCompletionRequestMessageRoleEnum,
 } from "openai";
 import { init, Tiktoken } from "@dqbd/tiktoken/lite/init";
-import * as wasm from "@dqbd/tiktoken/lite/tiktoken_bg.wasm";
+import wasm from "@dqbd/tiktoken/lite/tiktoken_bg.wasm";
 import model from "@dqbd/tiktoken/encoders/cl100k_base.json";
 
 const mergeMaxTokens = (list: string[], encoder: Tiktoken, max: number): string[] => {
