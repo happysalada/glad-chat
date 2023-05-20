@@ -130,14 +130,8 @@
       return async ({ result: { data, type } }) => {
         loading = false;
         console.log("data", data);
-        if (type === "success" && data.content) {
-          messages = [
-            ...messages,
-            {
-              role: ChatCompletionResponseMessageRoleEnum.Assistant,
-              content: data.content,
-            },
-          ];
+        if (type === "success" && data.messages) {
+          messages = [ ...data.messages ];
         } else if (type === "failure" || data.error) {
           messages = [
             ...messages,
