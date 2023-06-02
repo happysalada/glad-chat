@@ -2,9 +2,8 @@ import type { Actions } from './$types';
 import {
 	ChatCompletionRequestMessageRoleEnum,
 } from "openai";
-import { init, Tiktoken } from "@dqbd/tiktoken/lite/init";
-import wasm from "@dqbd/tiktoken/lite/tiktoken_bg.wasm";
-import model from "@dqbd/tiktoken/encoders/cl100k_base.json";
+import { getEncoding } from "js-tiktoken";
+import type { Tiktoken } from 'js-tiktoken';
 
 const mergeMaxTokens = (list: string[], encoder: Tiktoken, max: number): string[] => {
 	let { chunks, currentText } = list.reduce(({ chunks, currentText, currentTokens }: { chunks: string[], currentText: string, currentTokens: number }, text) => {
@@ -91,42 +90,22 @@ export const actions = {
 		const pastRoles = data.getAll('pastRoles') as ChatCompletionRequestMessageRoleEnum[];
 		let pastContents = data.getAll('pastContents');
 		let allMessages = pastRoles.map((role, index) => ({ role, content: pastContents[index] }))
-		let api_key = platform?.env?.OPENAI_KEY || "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";
+		let api_key = platform?.env?.OPENAI_KEY || "";
 		try {
-			const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"Authorization": `Bearer ${api_key}`
-				},
-				body: JSON.stringify({
-					model: "text-embedding-ada-002",
-					input: message,
-				})
-			})
-
-			const { data: embeddingData } = await embeddingResponse.json();
-			const embedding = embeddingData[0].embedding;
-			const qdrantResponse = await fetch(
-				"https://qdrant.sassy.technology/collections/gc_first_test/points/search",
+			const meilisearchResponse = await fetch(
+				"https://meilisearch.sassy.technology/indexes/gc_test/search",
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						vector: embedding,
-						limit: 100,
-						with_payload: true,
+						q: message,
 					}),
 				}
 			);
-			const { result: qdrantPayloads } = await qdrantResponse.json();
-			await init((imports) => WebAssembly.instantiate(wasm, imports));
-			const encoder = new Tiktoken(
-				model.bpe_ranks,
-				model.special_tokens,
-				model.pat_str
-			);
-			const contents: string[] = mergeMaxTokens(qdrantPayloads.map(({ payload }: { payload: { room: string, message: string } }) => `ルーム:${payload.room};メッセージ：${payload.message}`), encoder, 4000);
+			const meilisearchPayload = await meilisearchResponse.json();
+			console.log(meilisearchPayload)
+			const encoder = getEncoding("cl100k_base")
+			const contents: string[] = mergeMaxTokens(meilisearchPayload.hits.map(({ room, message }: { room: string, message: string }) => `ルーム:${room};メッセージ：${message}`), encoder, 4000);
 			console.log("merged contents", contents);
 			let suggestions = await Promise.all(contents.map(content => filterForQuestion(content, message, api_key)))
 			// let relevantTexts = await Promise.all(mergeMaxTokens(suggestions.filter(filterErrors).map(response => response.content || ''), encoder, 4000).map((content) => {
@@ -150,7 +129,6 @@ export const actions = {
 			if (relevantText == '') throw new Error('empty relevant text');
 			console.log("content", relevantText)
 			console.log("content length", encoder.encode(relevantText).length)
-			encoder.free();
 			let messagesForCompletion = [
 				...allMessages,
 				{
