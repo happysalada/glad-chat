@@ -99,6 +99,7 @@ export const actions = {
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						q: message,
+						limit: 3,
 					}),
 				}
 			);
