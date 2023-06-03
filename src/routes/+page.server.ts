@@ -2,8 +2,10 @@ import type { Actions } from './$types';
 import {
 	ChatCompletionRequestMessageRoleEnum,
 } from "openai";
-import { getEncoding } from "js-tiktoken";
-import type { Tiktoken } from 'js-tiktoken';
+// import { getEncoding } from "js-tiktoken";
+// import type { Tiktoken } from 'js-tiktoken';
+import { Tiktoken } from '@dqbd/tiktoken/lite';
+import model from "@dqbd/tiktoken/encoders/cl100k_base.json";
 
 const mergeMaxTokens = (list: string[], encoder: Tiktoken, max: number): string[] => {
 	let { chunks, currentText } = list.reduce(({ chunks, currentText, currentTokens }: { chunks: string[], currentText: string, currentTokens: number }, text) => {
@@ -105,7 +107,12 @@ export const actions = {
 			);
 			const meilisearchPayload = await meilisearchResponse.json();
 			console.log(meilisearchPayload)
-			const encoder = getEncoding("cl100k_base")
+			// const encoder = getEncoding("cl100k_base")
+			const encoder = new Tiktoken(
+				model.bpe_ranks,
+				model.special_tokens,
+				model.pat_str
+			);
 			const contents: string[] = mergeMaxTokens(meilisearchPayload.hits.map(({ room, message }: { room: string, message: string }) => `ルーム:${room};メッセージ：${message}`), encoder, 4000);
 			console.log("merged contents", contents);
 			let suggestions = await Promise.all(contents.map(content => filterForQuestion(content, message, api_key)))
